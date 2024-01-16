@@ -1,4 +1,4 @@
-
+package com.exampleNeuralNetwork;
 
 public class Main {
 
