@@ -11,16 +11,33 @@ import javax.swing.JLabel;
 
 public class MNISTReader {
     public static void main(String[] args) {
-        try (DataInputStream dataInputStream = new DataInputStream(new FileInputStream("C:\\Users\\David\\Downloads\\archive\\train-images.idx3-ubyte"))) {
-            // Parse header
-            int magicNumber = dataInputStream.readInt();
-            int numberOfImages = dataInputStream.readInt();
-            int rows = dataInputStream.readInt();
-            int cols = dataInputStream.readInt();
+        try (DataInputStream imageInputStream = new DataInputStream(new FileInputStream("C:\\Users\\David\\Downloads\\archive\\train-images.idx3-ubyte"));
+             DataInputStream labelInputStream = new DataInputStream(new FileInputStream("C:\\Users\\David\\Downloads\\archive\\train-labels.idx1-ubyte"))) {
+
+            // Parse image header
+            int imageMagicNumber = imageInputStream.readInt();
+            int numberOfImages = imageInputStream.readInt();
+            int rows = imageInputStream.readInt(); // for each image
+            int cols = imageInputStream.readInt();
+
+            // Parse label header
+            int labelMagicNumber = labelInputStream.readInt();
+            int numberOfLabels = labelInputStream.readInt();
 
             // Read and display the first image
             byte[] imageData = new byte[rows * cols];
-            dataInputStream.readFully(imageData);
+            imageInputStream.readFully(imageData);
+
+            for (int i = 0; i < rows; ++i) {
+                for (int j = 0; j < cols; ++j) {
+                    System.out.printf("%-4d ", imageData[i * cols + j]);
+                }
+                System.out.println();
+            }
+
+            // Read the corresponding label
+            byte label = labelInputStream.readByte();
+            System.out.println("Label: " + label);
 
             // Process and display the first image
             BufferedImage image = createImage(rows, cols, imageData);
