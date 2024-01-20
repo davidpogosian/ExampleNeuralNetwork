@@ -6,11 +6,9 @@ import java.util.Random;
 public class Main {
 
     public static void main(String[] args) {
-        Network network = new Network(Arrays.asList(10, 3, 2));
-        network.load(randomDoubleArray(10));
-        //network.run();
-        //network.getResult();
-        network.train();
+        Network network = new Network(Arrays.asList(784, 16, 16, 10));
+        network.train(new MNISTReader(), 100);
+        network.test(new MNISTReader());
 
 
     }
