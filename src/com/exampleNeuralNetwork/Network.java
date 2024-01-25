@@ -1,267 +1,209 @@
 package com.exampleNeuralNetwork;
 
-import java.util.Arrays;
+import java.io.EOFException;
 import java.util.List;
 import java.util.Random;
 
 public class Network {
-    
-    int levels;
-    int[] rows;
-    int[] cols;
-    double[][] weights;
-    double[][] activations;
-    double[][] nudges;
-    double[][] nudgeStash;
-    double learningRate = 0.1;
-    
-    public Network(List<Integer> layers) {
 
-        levels = layers.size() - 2;
+    List<Integer> layers;
+    Data<LabeledImage> trainData;
+    Data<LabeledImage> testData;
+    double learningRate = 0.01;
+    
+    int L;
 
-        // Initialize the weights.
+    Matrix input;
+    Matrix[] deltaW;
+    Matrix[] deltaB;
+    Matrix[] a;
+    Matrix[] b;
+    Matrix[] e;
+    Matrix[] w;
+    Matrix[] z;
+
+    double label;
+
+    Debugger debugger;
+
+
+    public Network(Data<LabeledImage> trainData, List<Integer> layers, Debugger debugger) {
+
+        this.layers = layers;
+        this.trainData = trainData;
+
+        L = layers.size() - 2;
+
+        input = new Matrix(layers.get(0), 1);
+        deltaW = new Matrix[L + 1];
+        deltaB = new Matrix[L + 1];
+        a = new Matrix[L + 1];
+        b = new Matrix[L + 1];
+        e = new Matrix[L + 1]; 
+        w = new Matrix[L + 1];
+        z = new Matrix[L + 1];
+
         Random random = new Random();
-        weights = new double[layers.size() - 1][];
 
-        for (int i = 0; i < layers.size() - 1; ++i) {
-            weights[i] = new double[layers.get(i + 1) * layers.get(i)];
+        for (int l = 0; l <= L; ++l) {
 
-            for (int j = 0; j < weights[i].length; ++j) {
-                weights[i][j] = random.nextDouble();
-            }
-        }
+            deltaW[l] = new Matrix(layers.get(l + 1), layers.get(l));
+            deltaB[l] = new Matrix(layers.get(l + 1), 1);
+            a[l] = new Matrix(layers.get(l + 1), 1);
+            b[l] = new Matrix(layers.get(l + 1), 1);
+            e[l] = new Matrix(layers.get(l + 1), 1);
+            w[l] = new Matrix(layers.get(l + 1), layers.get(l));
+            z[l] = new Matrix(layers.get(l + 1), 1);
 
-        // Initialize the activations.
-        activations = new double[layers.size()][];
-        for (int i = 0; i < layers.size(); ++i) {
-            activations[i] = new double[layers.get(i)];
-        }
 
-        // Initialize nudges and nudgeStash.
-        nudges = new double[layers.size() - 1][];
-        nudgeStash = new double[layers.size() - 1][];
-        for (int i = 0; i < nudges.length; ++i) {
-            nudges[i] = new double[layers.get(i) * layers.get(i + 1)];
-            nudgeStash[i] = new double[layers.get(i) * layers.get(i + 1)];
-        }
-
-        // Initialize rows and cols.
-        rows = new int[layers.size() - 1];
-        cols = new int[layers.size() - 1];
-
-        for (int i = 0; i < layers.size() - 1; ++i) {
-            rows[i] = layers.get(i + 1);
-            cols[i] = layers.get(i);
-        }
-
-    }
-
-    public void load(double[] input) {
-        for (int i = 0; i < activations[0].length; ++i) {
-            activations[0][i] = sigmoid(input[i]);
-        }
-    }
-
-    public void run() {
-        for (int i = 0; i < weights.length; ++i) {
-            //System.out.println("\n multiply: \n");
-            //System.out.printf("\n (%dx%d): \n", rows[i], cols[i]);
-            //print(weights[i], rows[i], cols[i], "weights[i]");
-            //System.out.println("\n by \n");
-            //print(activations[i], cols[i], 1, "activations[i]");
-
-            //System.out.printf("\n (%dx%d): \n", activations[i].length, 1);
-            //System.out.println("\n raw \n");
+            b[l].forEach((x) -> random.nextGaussian());
+            w[l].forEach((x) -> random.nextGaussian());
             
-            
-            double[] temp = matrixProduct(weights[i], activations[i], rows[i], cols[i], activations[i].length, 1);
-            for (int j = 0; j < activations[i + 1].length; ++j) {
-                activations[i + 1][j] = sigmoid(temp[j]);
-            }
-
-            //System.out.println(Arrays.toString(temp));
-
-            //System.out.println("\n after sigmoid get: \n");
-
-            //System.out.println(Arrays.toString(activations[i + 1]));
-            //print(activations[i + 1], rows[i], 1, "activations[i + 1]");
 
         }
+
+        this.debugger = debugger;
+
+
     }
 
-    public void train(MNISTReader reader, int batchSize) {
-        for (int batch = 0; batch < batchSize; ++batch) {
-            // Construct answers array.
-            double ans = reader.getNextLabel();
-            double[] answers = new double[10];
-            for (int i = 0; i < 10; ++i) {
-                if (i == ans) {
-                    answers[i] = 1;
-                } else {
-                    answers[i] = 0;
+    private void feedforward() {
+        // debugger.write("Input: \n\n");
+        // debugger.write(input.toString());
+
+        z[0] = Matrix.add(Matrix.dot(w[0], input), b[0]);
+
+        a[0] = Matrix.vectorized(z[0], this::sigmoid);
+
+        // debugger.write("a[0]: \n\n");
+        // debugger.write(a[0].toString());
+
+        for (int l = 1; l <= L; ++l) { // I had < here instead of <=. 
+
+            z[l] = Matrix.add(Matrix.dot(w[l], a[l - 1]), b[l]);
+
+            a[l] = Matrix.vectorized(z[l], this::sigmoid);
+
+            // debugger.write(String.format("a[%d]: \n\n", l));
+            // debugger.write(a[l].toString());
+        }
+    }
+    
+    public void stochasticGradientDescent(int batchSize, int batches, int epochs, double learningRate) {
+
+        this.learningRate = learningRate;
+
+        for (int epoch = 0; epoch < epochs; ++epoch) {
+
+            System.out.printf("Starting epoch %d. \n\n", epoch);
+
+            trainData.shuffle();
+
+            for (int batch = 0; batch < batches; ++batch) {
+
+                for (int l = 0; l <= L; ++l) {
+                    deltaW[l].reset();
+                    deltaB[l].reset();
                 }
-            }
 
-            load(reader.getNextImage());
-            run();
-            double[] results = getResults();
+                for (int example = 0; example < batchSize; ++example) {
 
-            //print(results, 2, 1, "results");
-            //print(answers, 2, 1, "answers");
+                    load(trainData);
+                    feedforward();
 
-            // Special treatment of the first set of nudges.
-            for (int r = 0; r < rows[levels]; ++r) {
+                    // updateMiniBatch
+                    backpropogate();
 
-                //System.out.printf("level: %d \nrow: %d \n", levels, r);
-                double costDerivative = costDerivative(results[r], answers[r]);
-                //System.out.printf("costDerivative: %f \n", costDerivative);
-
-                for (int c = 0; c < cols[levels]; ++c) {
-                    nudges[levels][r * cols[levels] + c] += costDerivative * precomputedSigDer(activations[levels + 1][r]);
-                    //System.out.printf("level: %d \ncol: %d \n\n", levels, r, c);
-
-                    //System.out.printf("activations[i][c]: %f \ncostDer: %f \n=> nudges[i][r * cols[i] + c]: %f \n\n", activations[levels][c], costDerivative, nudges[levels][r * cols[levels] + c]);
 
                 }
-            }
 
-            // Scuffed.
-            //print(nudges[levels], activations[levels + 1].length, activations[levels].length, "nudges[i]");
-
-
-            
-            // The rest of the nudges.
-            for (int i = levels - 1; i >= 0; --i) {
+                // Gradient Descent.
+                for (int l = 0; l <= L; ++l) {
+                    w[l].subtract(Matrix.scalar(learningRate / batchSize, deltaW[l]));
+                    b[l].subtract(Matrix.scalar(learningRate / batchSize, deltaB[l]));
+                }
                 
-                for (int r = 0; r < rows[i]; ++r) {
-
-                    for (int c = 0; c < cols[i]; ++c) {
-                        
-                        for (int j = 0; j < rows[i + 1]; ++j) {
-
-                            //System.out.printf("level: %d \nrow: %d\ncol: %d \n j: %d \n\n", i, r, c, j);
-
-                            double temp = nudges[i + 1][j * cols[i + 1] + r];
-                            temp *= weights[i + 1][j * rows[i] + r];
-
-                            //print(activations[i + 1], rows[i + 1], 1, "activations of right");
-                            //System.out.println(i + 1);
-
-                            temp *= precomputedSigDer(activations[i + 1][r]);
-                            nudges[i][r * cols[i] + c] += temp;
-
-
-                        }
-
-
-                    }
-                }
-
-                // Scuffed.
-                //print(nudges[i], activations[i + 1].length, activations[i].length, "nudges[i]");
-            }
-
-            // Tack on activations, stash the nudges, and reset nudges.
-            for (int i = levels; i >= 0; --i) {
-
-                for (int r = 0; r < rows[i]; ++r) {
-
-                    for (int c = 0; c < cols[i]; ++c) {
-                        
-                        nudges[i][r * cols[i] + c] *= activations[i][c];
-                        nudgeStash[i][r * cols[i] + c] += nudges[i][r * cols[i] + c];
-                        nudges[i][r * cols[i] + c] = 0;
-
-
-                    }
-                }
-
-                // Scuffed.
-                //print(nudgeStash[i], activations[i + 1].length, activations[i].length, "nudgeStash[i]");
-            }
-        }
-        
-        // Apply nudges from the stash, and reset the nudgeStash.
-        for (int i = levels; i >= 0; --i) {
-
-            for (int r = 0; r < rows[i]; ++r) {
-
-                for (int c = 0; c < cols[i]; ++c) {
-                    
-                    weights[i][r * cols[i] + c] -= learningRate * nudgeStash[i][r * cols[i] + c];
-
-                    nudgeStash[i][r * cols[i] + c] = 0;
-
-
-                }
-
             }
 
         }
 
+    }
+
+    private void backpropogate() {
+
+        // Get label in vector form.
+        Matrix y = labelToVector();
+
+        // Output error.
+        e[L] = Matrix.hadamard(Matrix.subtract(a[L], y), Matrix.vectorized(z[L], this::sigmoidDerivative));
+        deltaW[L].add(Matrix.dot(e[L], Matrix.transpose(a[L - 1])));
+        deltaB[L].add(e[L]);
+
+        for (int l = L - 1; l > 0; --l) {
+            e[l] = Matrix.hadamard(Matrix.dot(Matrix.transpose(w[l + 1]), e[l + 1]), Matrix.vectorized(z[l], this::sigmoidDerivative));
+            deltaW[l].add(Matrix.dot(e[l], Matrix.transpose(a[l - 1])));
+            deltaB[l].add(e[l]);
+        }
+
+        e[0] = Matrix.hadamard(Matrix.dot(Matrix.transpose(w[0 + 1]), e[0 + 1]), Matrix.vectorized(z[0], this::sigmoidDerivative));
+        deltaW[0].add(Matrix.dot(e[0], Matrix.transpose(input)));
+        deltaB[0].add(e[0]);
+
+    }
+
+    public void setTestData(Data<LabeledImage> testData) {
+        this.testData = testData;
+    }
+
+    public double test(int tests) {
+
+        for (int test = 0; test < tests; ++test) {
+            load(testData);
+            feedforward();
+
+            Matrix y = labelToVector();
+
+            debugger.write(y.toString());
+            debugger.write(a[L].toString());
+        }        
         
-        
-
-
-        
+        return 0.0;
 
     }
 
-    public double test(MNISTReader reader) {
-        System.out.println("Testing");
 
-        return 0;
+
+    private void load(Data<LabeledImage> data) {
+        LabeledImage example;
+        try {
+            example = data.getNextExample();
+            input.columnVector(example.getImage());
+            label = example.getLabel();
+        } catch (EOFException e) {
+            e.printStackTrace();
+        }
     }
 
-    public double cost(double actual, double anticipated) {
-        return Math.pow((actual - anticipated), 2);
-    }
+    private Matrix labelToVector() {
 
-    public double costDerivative(double actual, double anticipated) {
-        return 2 * (actual - anticipated);
-    }
+        Double[] yArray = new Double[layers.get(L + 1)];
 
-    public double sigmoid(double x) {
-        return 1 / (1 + Math.pow(Math.E, -1 * x));
-    }
-
-    public double sigmoidDerivative(double x) {
-        return sigmoid(x) * (1 - sigmoid(x));
-    }
-
-    public double precomputedSigDer(double sig) {
-        return sig * (1 - sig);
-    }
-
-    public double[] matrixProduct(double[] a, double[] b, int rowsA, int colsA, int rowsB, int colsB) {
-        int rows = rowsA;
-        int cols = colsB;
-        double[] result = new double[rows * cols];
-
-        for (int i = 0; i < rows; ++i) {
-            for (int j = 0; j < cols; ++j) {
-                for (int k = 0; k < colsA; ++k) {
-                    result[i * cols + j] += a[i * colsA + k] * b[k * colsB + j];
-                }
+        for (int i = 0; i < yArray.length; ++i) {
+            if (i == label) {
+                yArray[i] = 1.0; 
+            } else {
+                yArray[i] = 0.0;
             }
         }
 
-        return result;
+        return new Matrix().columnVector(yArray);
     }
 
-    public double[] getResults() {
-        return activations[activations.length - 1];
+    private double sigmoid(double z) {
+        return 1.0 / (1.0 + Math.exp(-z));
     }
 
-    public void print(double[] arr, int rows, int cols, String msg) {
-        System.out.printf("\n--- %s --- \n", msg);
-        for (int i = 0; i < rows; ++i) {
-            for (int j = 0; j < cols; ++j) {
-                System.out.printf("%-10.3f", arr[i * cols + j]);
-            }
-            System.out.println();
-        }
-        System.out.printf("--- %s --- \n", msg);
+    private double sigmoidDerivative(double z) {
+        return sigmoid(z) * (1 - sigmoid(z));
     }
-
 }

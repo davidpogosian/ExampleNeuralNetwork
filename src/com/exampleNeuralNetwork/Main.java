@@ -1,24 +1,48 @@
 package com.exampleNeuralNetwork;
 
 import java.util.Arrays;
-import java.util.Random;
 
 public class Main {
 
     public static void main(String[] args) {
-        Network network = new Network(Arrays.asList(784, 16, 16, 10));
-        network.train(new MNISTReader(), 100);
-        network.test(new MNISTReader());
+        
+        Debugger debugger = new Debugger("logs/network.txt");
+
+        MNISTReader trainReader = new MNISTReader(
+            "archive/train-images.idx3-ubyte", 
+            "archive/train-labels.idx1-ubyte",
+            debugger
+        );
+
+        MNISTReader testReader = new MNISTReader(
+            "archive/t10k-images.idx3-ubyte", 
+            "archive/t10k-labels.idx1-ubyte",
+            debugger
+        );
+
+        Network network = new Network(
+            trainReader, 
+            Arrays.asList(784, 30, 10), 
+            debugger
+        );
+
+        network.stochasticGradientDescent(10, 6000, 30, 3.0);
+
+        network.setTestData(testReader);
+
+        network.test(10);
 
 
-    }
 
-    public static double[] randomDoubleArray(int size) {
-        Random random = new Random();
-        double[] output = new double[size];
-        for (int i = 0; i < size; ++i) {
-            output[i] = random.nextDouble(0, 1);
-        }
-        return output;
+
+
+
+
+
+
+
+
+        debugger.close();
+
     }
 }
