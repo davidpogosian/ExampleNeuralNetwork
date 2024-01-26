@@ -1,5 +1,1 @@
-archive
-.jython_cache/
 .vscode/
-__pycache__/
-scrap$py.class
