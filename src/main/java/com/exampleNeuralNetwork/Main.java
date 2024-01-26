@@ -1,5 +1,6 @@
 package com.exampleNeuralNetwork;
 
+
 import java.util.Arrays;
 
 public class Main {
@@ -26,7 +27,9 @@ public class Main {
             debugger
         );
 
-        network.stochasticGradientDescent(10, 6000, 30, 3.0);
+        //network.stochasticGradientDescent(10, 1, 1, 3.0);
+        network.stochasticGradientDescent(10, 6000, 1, 3.0);
+
 
         network.setTestData(testReader);
 

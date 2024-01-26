@@ -1,0 +1,8 @@
+com\exampleNeuralNetwork\Action.class
+com\exampleNeuralNetwork\Data.class
+com\exampleNeuralNetwork\Matrix.class
+com\exampleNeuralNetwork\Network.class
+com\exampleNeuralNetwork\Main.class
+com\exampleNeuralNetwork\MNISTReader.class
+com\exampleNeuralNetwork\Debugger.class
+com\exampleNeuralNetwork\LabeledImage.class

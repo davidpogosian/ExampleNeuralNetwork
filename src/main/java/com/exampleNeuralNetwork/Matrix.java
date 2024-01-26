@@ -71,9 +71,9 @@ public class Matrix {
             throw new IllegalArgumentException("Matrix dimensions are incompatible for hadamard product.");
         }
 
-        for (int i = 0; i < rows; ++i) {
-            for (int j = 0; j < cols; ++j) {
-                data[i * cols + j] -= B.data[i * B.cols + j] ;
+        for (int i = 0; i < this.rows; ++i) {
+            for (int j = 0; j < this.cols; ++j) {
+                this.data[i * cols + j] -= B.data[i * B.cols + j] ;
             }
         }
 
@@ -103,7 +103,7 @@ public class Matrix {
 
         for (int i = 0; i < A.rows; ++i) {
             for (int j = 0; j < A.cols; ++j) {
-                A.data[i * A.cols + j] *= scalar;
+                scaledMatrix.data[i * scaledMatrix.cols + j] = A.data[i * A.cols + j] * scalar;
             }
         }
 
@@ -138,7 +138,7 @@ public class Matrix {
 
         for (int i = 0; i < difference.rows; ++i) {
             for (int j = 0; j < difference.cols; ++j) {
-                difference.data[i * difference.cols + j] = A.data[i * A.cols + j] - B.data[i * B.cols + j] ;
+                difference.data[i * difference.cols + j] = A.data[i * A.cols + j] - B.data[i * B.cols + j];
             }
         }
         

@@ -58,6 +58,9 @@ public class Network {
 
             b[l].forEach((x) -> random.nextGaussian());
             w[l].forEach((x) -> random.nextGaussian());
+
+            // b[l].forEach((x) -> 0.1);
+            // w[l].forEach((x) -> 0.1);
             
 
         }
@@ -97,7 +100,7 @@ public class Network {
 
             System.out.printf("Starting epoch %d. \n\n", epoch);
 
-            trainData.shuffle();
+            //trainData.shuffle();
 
             for (int batch = 0; batch < batches; ++batch) {
 
@@ -117,13 +120,30 @@ public class Network {
 
                 }
 
+                //debugger.write("Changes in weights and biases \n\n");
+
                 // Gradient Descent.
                 for (int l = 0; l <= L; ++l) {
-                    w[l].subtract(Matrix.scalar(learningRate / batchSize, deltaW[l]));
-                    b[l].subtract(Matrix.scalar(learningRate / batchSize, deltaB[l]));
+                    Matrix nablaW = Matrix.scalar(learningRate / batchSize, deltaW[l]);
+                    Matrix nablaB = Matrix.scalar(learningRate / batchSize, deltaB[l]);
+
+                    //debugger.write(deltaW[l].toString());
+                    //debugger.write(deltaB[l].toString());
+
+                    w[l].subtract(nablaW);
+                    b[l].subtract(nablaB);
                 }
                 
             }
+
+
+            // debugger.write("WEIGHTS AND BIASES AFTER 1 EPOCH \n\n");
+            // for (int l = 0; l <= L; ++l) {
+            //     debugger.write(w[l].toString());
+            // }
+            // for (int l = 0; l <= L; ++l) {
+            //     debugger.write(b[l].toString());
+            // }
 
         }
 
@@ -136,6 +156,10 @@ public class Network {
 
         // Output error.
         e[L] = Matrix.hadamard(Matrix.subtract(a[L], y), Matrix.vectorized(z[L], this::sigmoidDerivative));
+
+        // debugger.write("Delta: \n\n");
+        // debugger.write(e[L].toString());
+
         deltaW[L].add(Matrix.dot(e[L], Matrix.transpose(a[L - 1])));
         deltaB[L].add(e[L]);
 
@@ -178,6 +202,9 @@ public class Network {
         try {
             example = data.getNextExample();
             input.columnVector(example.getImage());
+
+            //debugger.write(input.toString());
+
             label = example.getLabel();
         } catch (EOFException e) {
             e.printStackTrace();
